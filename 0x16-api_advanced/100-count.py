@@ -1,52 +1,61 @@
 #!/usr/bin/python3
-"""A script for counting hot terms on subreddits"""
-import requests
+""" Count it! """
+from requests import get
+
+REDDIT = "https://www.reddit.com/"
+HEADERS = {'user-agent': 'my-app/0.0.1'}
 
 
-def count_words(subreddit, word_list, after=None, count={}):
+def count_words(subreddit, word_list, after="", word_dic={}):
     """
-    a recursive function that queries the Reddit API,
-    parses the title of all hot articles, and prints a
-    sorted count of given keywords (case-insensitive,
-    delimited by spaces. Javascript should count as javascript,
-    but java should not).
-
-    Parameters:
-        subreddit - the subreddit to search
-        word_list - contains the same word (case-insensitive),
-            the final count should be the sum of each duplicate
+    Returns a list containing the titles of all hot articles for a
+    given subreddit. If no results are found for the given subreddit,
+    the function should return None.
     """
-    if word_list == []:
-        return None
-    else:
-        lower_list = (map(lambda word: word.lower(), word_list))
-        word_list = list(lower_list)
-    if after is None:
-        hot = 'https://www.reddit.com/r/{}/hot.json'.format(subreddit)
-    else:
-        hot = 'https://www.reddit.com/r/{}/hot.json?after={}'.format(
-            subreddit, after)
-    hot_request = requests.get(hot,
-                               headers={"user-agent": "user"},
-                               allow_redirects=False)
-    try:
-        data = hot_request.json().get("data")
-    except:
-        return
-    for word in word_list:
-        if word not in count.keys():
-            count[word] = 0
-    children = data.get("children")
-    for child in children:
-        title = (child.get("data").get("title").lower())
-        title = title.split(' ')
+    if not word_dic:
         for word in word_list:
-            count[word] += title.count(word)
-    after = data.get("after")
-    if after is not None:
-        return count_words(subreddit, word_list, after, count)
-    else:
-        sorted_subs = sorted(count.items(), key=lambda x: (-x[1], x[0]))
-        for i in sorted_subs:
-            if i[1] != 0:
-                print(i[0] + ": " + str(i[1]))
+            word_dic[word] = 0
+
+    if after is None:
+        word_list = [[key, value] for key, value in word_dic.items()]
+        word_list = sorted(word_list, key=lambda x: (-x[1], x[0]))
+        for w in word_list:
+            if w[1]:
+                print("{}: {}".format(w[0].lower(), w[1]))
+        return None
+
+    url = REDDIT + "r/{}/hot/.json".format(subreddit)
+
+    params = {
+        'limit': 100,
+        'after': after
+    }
+
+    r = get(url, headers=HEADERS, params=params, allow_redirects=False)
+
+    if r.status_code != 200:
+        return None
+
+    try:
+        js = r.json()
+
+    except ValueError:
+        return None
+
+    try:
+
+        data = js.get("data")
+        after = data.get("after")
+        children = data.get("children")
+        for child in children:
+            post = child.get("data")
+            title = post.get("title")
+            lower = [s.lower() for s in title.split(' ')]
+
+            for w in word_list:
+                word_dic[w] += lower.count(w.lower())
+
+    except:
+        return None
+
+    count_words(subreddit, word_list, after, word_dic)
