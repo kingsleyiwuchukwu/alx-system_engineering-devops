@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn application server running AirBnB_clone_v4
+Author=Olayeye Muideen
+
+[Service]
+ExecStart=/home/ubuntu/.local/bin/gunicorn --workers 3 --bind 0.0.0.0:5003 web_dynamic.2-hbnb:app
+Restart=always
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/AirBnB_clone_v4
+
+[Install]
+WantedBy=multi-user.target
